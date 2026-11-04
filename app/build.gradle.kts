@@ -51,7 +51,8 @@ android {
         }
         create("termux") {
             dimension = "mode"
-            applicationId = "com.termux"
+            // Use a unique ID so AntiGem can be installed alongside the official Termux app.
+            applicationId = "com.antigem.termux"
             buildConfigField("int", "BRIDGE_PORT", "1234")
             buildConfigField("int", "HUB_PORT", "1235")
             buildConfigField("int", "BROWSER_MCP_PORT", "8765")
