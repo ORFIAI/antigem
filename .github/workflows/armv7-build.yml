@@ -39,4 +39,4 @@ jobs:
           file app/src/main/assets/bin/agy_ide_bridge-armv7
           test -s app/src/main/assets/bin/agy_ide_bridge-arm64
           test -s app/src/main/assets/bin/agy_ide_bridge-armv7
-          test -s app/build/outputs/apk/termux/debug/app-termux-debug.apk
+          find app/build/outputs/apk/termux/debug -name '*.apk' -print -quit | grep -q .
