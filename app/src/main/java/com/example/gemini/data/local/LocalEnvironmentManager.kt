@@ -724,13 +724,14 @@ object LocalEnvironmentManager {
         val packageName = context.packageName
         val isTermux = isTermuxPackage(context)
         val info = if (isTermux) {
+            val armv7BootstrapUrl = if (arch == "arm") resolveBootstrapUrls(arch).firstOrNull() else null
             DiscoveredPackageInfo(
-                url = HARDCODED_ROOTFS_URL,
-                releaseTag = HARDCODED_ROOTFS_TAG,
-                assetName = HARDCODED_ROOTFS_ASSET,
+                url = armv7BootstrapUrl ?: HARDCODED_ROOTFS_URL,
+                releaseTag = if (arch == "arm") "termux-bootstrap" else HARDCODED_ROOTFS_TAG,
+                assetName = if (arch == "arm") "bootstrap-arm.zip" else HARDCODED_ROOTFS_ASSET,
                 arch = arch,
-                sizeBytes = HARDCODED_ROOTFS_SIZE_BYTES,
-                sizeFormatted = "~350 MB",
+                sizeBytes = if (arch == "arm") 0L else HARDCODED_ROOTFS_SIZE_BYTES,
+                sizeFormatted = if (arch == "arm") "Official 32-bit ARM bootstrap" else "~350 MB",
                 packageName = packageName
             )
         } else {
@@ -878,10 +879,21 @@ object LocalEnvironmentManager {
             when (source) {
                 is BootstrapSource.Auto -> {
                     val isTermux = isTermuxPackage(appContext)
-                    val targetUrl = if (isTermux) HARDCODED_ROOTFS_URL else UBUNTU_ROOTFS_URL
-                    val targetAsset = if (isTermux) HARDCODED_ROOTFS_ASSET else UBUNTU_ROOTFS_ASSET
-                    val targetSizeBytes = if (isTermux) HARDCODED_ROOTFS_SIZE_BYTES else UBUNTU_ROOTFS_SIZE_BYTES
-                    val titlePrefix = if (isTermux) "AntiGem Rootfs" else "Ubuntu Rootfs"
+                    // The bundled custom Termux rootfs is AArch64-only. On 32-bit
+                    // ARM devices, install the official architecture-matched Termux bootstrap.
+                    val useOfficialArmBootstrap = isTermux && arch == "arm"
+                    val targetUrl = if (useOfficialArmBootstrap) {
+                        resolveBootstrapUrls(arch).firstOrNull()
+                    } else if (isTermux) HARDCODED_ROOTFS_URL else UBUNTU_ROOTFS_URL
+                    if (targetUrl.isNullOrBlank()) {
+                        val errorMsg = "Could not find an official Termux bootstrap for ARMv7."
+                        _installerState.value = LocalInstallerState.Error(errorMessage = errorMsg, canRetry = true)
+                        updateInstallNotification(appContext, "Installation Failed", errorMsg, -2, ongoing = false, force = true)
+                        return@withContext false
+                    }
+                    val targetAsset = if (useOfficialArmBootstrap) "bootstrap-arm.zip" else if (isTermux) HARDCODED_ROOTFS_ASSET else UBUNTU_ROOTFS_ASSET
+                    val targetSizeBytes = if (useOfficialArmBootstrap) 150L * 1024L * 1024L else if (isTermux) HARDCODED_ROOTFS_SIZE_BYTES else UBUNTU_ROOTFS_SIZE_BYTES
+                    val titlePrefix = if (useOfficialArmBootstrap) "Official ARMv7 Termux" else if (isTermux) "AntiGem Rootfs" else "Ubuntu Rootfs"
 
                     _installerState.value = LocalInstallerState.Downloading(
                         bytesDownloaded = 0L,
