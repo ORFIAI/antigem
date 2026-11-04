@@ -51,7 +51,8 @@ android {
         }
         create("termux") {
             dimension = "mode"
-            applicationId = "com.termux"
+            // Use a unique ID so AntiGem can be installed alongside the official Termux app.
+            applicationId = "com.antigem.termux"
             buildConfigField("int", "BRIDGE_PORT", "1234")
             buildConfigField("int", "HUB_PORT", "1235")
             buildConfigField("int", "BROWSER_MCP_PORT", "8765")
@@ -218,19 +219,32 @@ wire {
   }
 }
 
-val buildAgyIdeBridge = tasks.register<Exec>("buildAgyIdeBridge") {
-  val binDir = layout.projectDirectory.dir("src/main/assets/bin")
-  val bridgeSourceDir = layout.projectDirectory.dir("../agy_ide_bridge")
+val bridgeSourceDir = layout.projectDirectory.dir("../agy_ide_bridge")
+val bridgeBinDir = layout.projectDirectory.dir("src/main/assets/bin")
 
-  doFirst {
-    binDir.asFile.mkdirs()
-  }
-
+// Ship both Android ARM ABIs in the APK assets. Runtime selection happens from
+// Build.SUPPORTED_ABIS so 32-bit Android never tries to execute an AArch64 ELF.
+val buildAgyIdeBridgeArm64 = tasks.register<Exec>("buildAgyIdeBridgeArm64") {
+  doFirst { bridgeBinDir.asFile.mkdirs() }
   workingDir = bridgeSourceDir.asFile
   environment("GOOS", "android")
   environment("GOARCH", "arm64")
   environment("CGO_ENABLED", "0")
-  commandLine("go", "build", "-ldflags=-s -w", "-o", binDir.file("agy_ide_bridge").asFile.absolutePath, "main.go")
+  commandLine("go", "build", "-trimpath", "-ldflags=-s -w", "-o",
+    bridgeBinDir.file("agy_ide_bridge-arm64").asFile.absolutePath, "main.go")
+}
+
+val buildAgyIdeBridgeArmv7 = tasks.register<Exec>("buildAgyIdeBridgeArmv7") {
+  doFirst { bridgeBinDir.asFile.mkdirs() }
+  workingDir = bridgeSourceDir.asFile
+  environment("GOOS", "android")
+  environment("GOARCH", "arm")
+  environment("GOARM", "7")
+  // Android/ARM requires cgo. Use the ARMv7 Android NDK compiler installed by CI.
+  environment("CGO_ENABLED", "1")
+  environment("CC", "${System.getenv("ANDROID_HOME")}/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang")
+  commandLine("go", "build", "-trimpath", "-ldflags=-s -w", "-o",
+    bridgeBinDir.file("agy_ide_bridge-armv7").asFile.absolutePath, "main.go")
 }
 
 val copyScriptsToAssets = tasks.register<Copy>("copyScriptsToAssets") {
@@ -259,7 +273,7 @@ val copyScriptsToAssets = tasks.register<Copy>("copyScriptsToAssets") {
 }
 
 tasks.named("preBuild") {
-  dependsOn(buildAgyIdeBridge, copyScriptsToAssets)
+  dependsOn(buildAgyIdeBridgeArm64, buildAgyIdeBridgeArmv7, copyScriptsToAssets)
 }
 
 

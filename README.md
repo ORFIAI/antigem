@@ -145,6 +145,24 @@ With the package name `com.termux`, AntiGem can install the official Termux boot
 
 AntiGem is not a copy or modification of the Termux app. The app was written from scratch. It uses only Termux's open-source **terminal-emulator** and **terminal-view** libraries for drawing the terminal, and the Termux bootstrap and package repositories for the Linux environment. The UI, the agent integrations, the Go bridge, the MCP servers, the plugin system and everything else are AntiGem's own code.
 
+### 32-bit ARM (ARMv7) compatibility
+
+The `termux` flavor is also built with an ARMv7 Go bridge for older 32-bit
+Android devices (for example, devices reporting `armeabi-v7a`). At startup,
+AntiGem selects the bridge that matches the device ABI. On ARMv7, the installer
+uses the official architecture-matched Termux bootstrap instead of the
+AArch64-only bundled root filesystem.
+
+**Limitations on 32-bit devices:** the Antigravity (`agy`) hub is disabled
+because the upstream Antigravity CLI does not provide a supported 32-bit ARM
+Android executable. The app UI, terminal, Go bridge and Claude Code relay can
+still run; Claude Code itself additionally depends on a compatible Node.js
+runtime and supported CLI package. The `standard` flavor currently uses an
+AArch64 Ubuntu rootfs and is not the 32-bit option. Use the `termux` flavor.
+
+The Android APK build targets the device's supported ABI at install time; the
+Go bridge assets include both ARM64 and ARMv7 variants.
+
 ### Termux compatibility
 
 Packages, `apt`/`pkg`, the shell and almost everything else work as in Termux. The exception is **Termux:API**: in Termux you install the separate Termux:API app to get commands for location, SMS and other device features.
@@ -193,7 +211,7 @@ The official Termux:API app does not work with AntiGem either: Android only lets
 
 ## Building from source
 
-**Requirements:** JDK 17+, Android SDK (API 35, Build Tools 35+) and Go 1.23+ for the bridge.
+**Requirements:** JDK 17+, Android SDK (API 35, Build Tools 35+) and Go 1.26.5+ for the bridge.
 
 ```bash
 git clone https://github.com/santoshkurmi/antigem.git

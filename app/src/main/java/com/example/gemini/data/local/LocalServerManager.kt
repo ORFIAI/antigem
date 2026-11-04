@@ -46,11 +46,21 @@ object LocalServerManager {
     private const val PREFS_NAME = "local_server_prefs"
     private const val KEY_BRIDGE_LAST_UPDATE_TIME = "bridge_last_update_time"
 
+    private fun bridgeAssetName(context: Context): String? {
+        val abis = android.os.Build.SUPPORTED_ABIS?.toList().orEmpty()
+        return when {
+            abis.any { it == "arm64-v8a" } -> "agy_ide_bridge-arm64"
+            abis.any { it == "armeabi-v7a" || it == "armeabi" } -> "agy_ide_bridge-armv7"
+            else -> null
+        }
+    }
+
     fun hasServerScript(context: Context): Boolean {
         val binBridge = File(LocalEnvironmentManager.getBinDir(context), "agy_ide_bridge")
-        if (binBridge.exists()) return true
+        if (binBridge.exists() && binBridge.length() > 0L) return true
+        val assetName = bridgeAssetName(context) ?: return false
         return try {
-            context.assets.list("bin")?.contains("agy_ide_bridge") == true
+            context.assets.list("bin")?.contains(assetName) == true
         } catch (_: Exception) {
             false
         }
@@ -115,7 +125,9 @@ object LocalServerManager {
                 if (!binDir.exists()) {
                     binDir.mkdirs()
                 }
-                extractAssetToBin(context, binDir, "agy_ide_bridge")
+                val bridgeAsset = bridgeAssetName(context)
+                    ?: throw IllegalStateException("This APK has no native bridge build for this device ABI")
+                extractAssetToBin(context, binDir, bridgeAsset, "agy_ide_bridge")
                 try {
                     extractAssetToBin(context, binDir, "backup_bootstrap")
                 } catch (e: Exception) {
@@ -179,7 +191,9 @@ object LocalServerManager {
             if (bridgeFile.exists() && bridgeFile.length() > 0) {
                 bridgeFile.copyTo(destFile, overwrite = true)
             } else {
-                context.assets.open("bin/agy_ide_bridge").use { input ->
+                val assetName = bridgeAssetName(context)
+                    ?: throw IllegalStateException("No ARM bridge binary is available for this device")
+                context.assets.open("bin/$assetName").use { input ->
                     destFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
@@ -228,8 +242,11 @@ object LocalServerManager {
 
         // agents switched off in the app never run (no AGY hub / no Claude Code endpoints)
         val agentFlags = com.example.gemini.data.agent.AgentPreferences.bridgeFlags(context)
+        // Antigravity CLI has no supported 32-bit ARM Android build. Keep the Go
+        // bridge and Claude relay available, but do not launch an AArch64 AGY binary.
+        val architectureFlags = if (LocalEnvironmentManager.getBootstrapArch() == "arm") " --no-hub" else ""
 
-        return "$bridgeCmd -f --token $token -p $bridgePort --hub-port $hubPort --tz-offset $tzOffset$binParam$claudeBinParam$agentFlags"
+        return "$bridgeCmd -f --token $token -p $bridgePort --hub-port $hubPort --tz-offset $tzOffset$binParam$claudeBinParam$agentFlags$architectureFlags"
     }
 
     /**
