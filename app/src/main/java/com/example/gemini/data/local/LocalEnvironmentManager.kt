@@ -172,7 +172,7 @@ object LocalEnvironmentManager {
     fun getHomeDir(context: Context): File = File(context.filesDir, "home")
     fun getProjectsDir(context: Context): File = File(getHomeDir(context), "projects")
     fun getUbuntuRootDir(context: Context): File = File(context.filesDir, "ubuntu")
-    fun isTermuxPackage(context: Context): Boolean = context.packageName == "com.termux"
+    fun isTermuxPackage(context: Context): Boolean = context.packageName == "com.antigem.termux"
 
     fun ensureProotExtracted(context: Context): String {
         val binDir = File(context.filesDir, "bin")
