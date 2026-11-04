@@ -239,7 +239,9 @@ val buildAgyIdeBridgeArmv7 = tasks.register<Exec>("buildAgyIdeBridgeArmv7") {
   environment("GOOS", "android")
   environment("GOARCH", "arm")
   environment("GOARM", "7")
-  environment("CGO_ENABLED", "0")
+  // Android/ARM requires cgo. Use the ARMv7 Android NDK compiler installed by CI.
+  environment("CGO_ENABLED", "1")
+  environment("CC", "${System.getenv("ANDROID_HOME")}/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang")
   commandLine("go", "build", "-trimpath", "-ldflags=-s -w", "-o",
     bridgeBinDir.file("agy_ide_bridge-armv7").asFile.absolutePath, "main.go")
 }
