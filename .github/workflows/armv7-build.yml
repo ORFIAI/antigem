@@ -48,3 +48,14 @@ jobs:
           test -s app/src/main/assets/bin/agy_ide_bridge-arm64
           test -s app/src/main/assets/bin/agy_ide_bridge-armv7
           find app/build/outputs/apk/termux/debug -name '*.apk' -print -quit | grep -q .
+
+      - name: Upload ARMv7 debug APK and bridge binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: antigem-termux-armv7-debug
+          path: |
+            app/build/outputs/apk/termux/debug/*.apk
+            app/src/main/assets/bin/agy_ide_bridge-armv7
+            app/src/main/assets/bin/agy_ide_bridge-arm64
+          if-no-files-found: error
+          retention-days: 14
