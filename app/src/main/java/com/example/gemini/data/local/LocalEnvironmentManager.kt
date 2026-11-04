@@ -723,6 +723,11 @@ object LocalEnvironmentManager {
         val arch = getBootstrapArch()
         val packageName = context.packageName
         val isTermux = isTermuxPackage(context)
+        if (!isTermux && arch == "arm") {
+            val errorMsg = "The standard flavor currently requires an AArch64 Ubuntu rootfs. Install the termux flavor on 32-bit ARM."
+            _installerState.value = LocalInstallerState.Error(errorMessage = errorMsg, canRetry = false)
+            return@withContext null
+        }
         val info = if (isTermux) {
             val armv7BootstrapUrl = if (arch == "arm") resolveBootstrapUrls(arch).firstOrNull() else null
             if (arch == "arm" && armv7BootstrapUrl.isNullOrBlank()) {
@@ -857,6 +862,11 @@ object LocalEnvironmentManager {
         val projectsDir = getProjectsDir(appContext)
 
         val arch = getBootstrapArch()
+        if (!isTermuxPackage(appContext) && arch == "arm") {
+            val errorMsg = "The standard flavor cannot install its AArch64 Ubuntu environment on 32-bit ARM. Use the termux flavor."
+            _installerState.value = LocalInstallerState.Error(errorMessage = errorMsg, canRetry = false)
+            return@withContext false
+        }
 
         clearLogs()
         log("Starting installation: arch=$arch, source=${source.javaClass.simpleName}")
