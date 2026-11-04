@@ -29,9 +29,12 @@ jobs:
           go-version: '1.26.5'
           cache-dependency-path: agy_ide_bridge/go.sum
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Android NDK
         run: |
-          yes | sdkmanager --licenses >/dev/null
+          sdkmanager --licenses
           sdkmanager "ndk;27.2.12479018"
 
       - name: Set up Gradle
