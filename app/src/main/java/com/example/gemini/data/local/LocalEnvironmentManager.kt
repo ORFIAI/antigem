@@ -725,6 +725,11 @@ object LocalEnvironmentManager {
         val isTermux = isTermuxPackage(context)
         val info = if (isTermux) {
             val armv7BootstrapUrl = if (arch == "arm") resolveBootstrapUrls(arch).firstOrNull() else null
+            if (arch == "arm" && armv7BootstrapUrl.isNullOrBlank()) {
+                val errorMsg = "No official 32-bit ARM Termux bootstrap was found. The AArch64 rootfs will not be used on this device."
+                _installerState.value = LocalInstallerState.Error(errorMessage = errorMsg, canRetry = true)
+                return@withContext null
+            }
             DiscoveredPackageInfo(
                 url = armv7BootstrapUrl ?: HARDCODED_ROOTFS_URL,
                 releaseTag = if (arch == "arm") "termux-bootstrap" else HARDCODED_ROOTFS_TAG,
